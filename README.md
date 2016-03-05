@@ -45,7 +45,7 @@ When used with no flags, gmailcount will print the number of emails in your
 inbox to stdout or nothing in case of failure. All errors are printed to stderr
 so as not to interfere with programs like xmobar.
 
-Security Concerns
+Security concerns
 -----------------
 One of the main goals of gmailcount is to provide a minimum level of
 security. To that end, all requests are sent via SSL, passwords are stored in
@@ -68,14 +68,13 @@ password and access your gmail password.
 Use gmailcount at your own risk! Still, it should be a lot more secure than a
 system that just stores your password as plain text at least.
 
-Sample xmobar Script
+Sample xmobar script
 --------------------
-Here's an example of a script suitable for use with xmobar. A very similar
-script should work for other status bar programs.
+Here's an example of a script suitable for use with xmobar:
 
     #!/usr/bin/env sh
 
-    email='example@example.com'
+    email='example@gmail.com'
     url='https://mail.google.com'
     full_text=$(/full/path/to/gmailcount "$email")
     full_text=${full_text:-?}
@@ -87,3 +86,28 @@ script should work for other status bar programs.
     esac
 
     echo "<action=\`xdg-open $url\`><fc=$color>✉ $full_text</fc></action>"
+
+Sample i3blocks script
+----------------------
+Here's one suitable for use with i3blocks:
+
+
+    #!/usr/bin/env sh
+
+    url='https://mail.google.com'
+    email='example@gmail.com'
+
+    [ "$BLOCK_BUTTON" = 1 ] && xdg-open "$url"
+
+    full_text=$(/full/path/to/gmailcount "$email")
+    full_text=${full_text:-?}
+
+    case $full_text in
+      ''|*[!0-9]*) color=\#FF0000 ;;
+      0)           color=\#888888 ;;
+      *)           color=\#00FF00 ;; 
+    esac
+
+    echo "$full_text"
+    echo "$short_text"
+    echo "$color"
