@@ -1,0 +1,138 @@
+#!/usr/bin/python3
+
+import argparse
+import getpass
+import keyring
+import requests
+import sys
+import xml.etree.ElementTree
+
+SERVICE_NAME = 'gmail-count'
+
+
+def fail(message, debug=False):
+    """
+    Log message to stderr and exit the script with an error code. Reraise
+    exceptions where appropriate.
+    """
+    print(message, file=sys.stderr)
+    if debug and sys.exc_info() != (None, None, None):
+        raise
+    sys.exit(1)
+
+
+def set_password(email_address, debug=False):
+    """
+    Store the password associated with email_address in the system keyring.
+    """
+    password = getpass.getpass()
+    try:
+        keyring.set_password(SERVICE_NAME, email_address, password)
+    except keyring.PasswordSetError as e:
+        fail("Failed to set password: '%s'" % e, debug=debug)
+
+
+def delete_password(email_address, debug=False):
+    """
+    Delete the password associated with email_address from the system keyring.
+    """
+    try:
+        keyring.delete_password(SERVICE_NAME, email_address)
+    except keyring.errors.PasswordDeleteError as e:
+        fail("Failed to delete password: '%s'" % e, debug=debug)
+
+
+def get_url(email_address):
+    """
+    Get the appropriate url for the gmail atom feed for email_address.
+    """
+    localpart, _, domain = email_address.rpartition('@')
+    if domain == 'gmail.com':
+        return 'https://mail.google.com/mail/feed/atom/'
+    else:
+        return 'https://mail.google.com/a/%s/feed/atom/' % domain
+
+
+def get_count_from_xml(xml_string):
+    """
+    Given the xml from the gmail atom feed, return the count of emails.
+    """
+    tree = xml.etree.ElementTree.fromstring(xml_string)
+    node = tree.find('{http://purl.org/atom/ns#}fullcount')
+    return node.text
+
+
+def get_mail_count(email_address, prompt=False, debug=False):
+    """
+    Get the count of emails in the inbox for email_address.
+    """
+    url = get_url(email_address)
+    if prompt:
+        password = getpass.getpass()
+    else:
+        password = keyring.get_password(SERVICE_NAME, email_address)
+    if password is None:
+        fail("No password set for '%s'" % email_address, debug=debug)
+
+    auth = requests.auth.HTTPBasicAuth(email_address, password)
+    response = requests.get(url, auth=auth)
+
+    if response.status_code != 200:
+        fail("Request failed: %s" % response.status_code, debug=debug)
+
+    try:
+        return get_count_from_xml(response.content)
+    except xml.etree.ElementTree.ParseError:
+        fail("Failed to parse XML:\n%s" % xml_string, debug=debug)
+
+
+def parse_args():
+    """
+    Parse command line arguments and return the args object.
+    """
+    parser = argparse.ArgumentParser(description='Check gmail message count.')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        '-s',
+        '--set-password',
+        dest='set_pass',
+        action='store_true',
+        default=False,
+        help='set the password for email_address',
+    )
+    group.add_argument(
+        '-d',
+        '--delete-password',
+        dest='delete_pass',
+        action='store_true',
+        default=False,
+        help='delete the password for email_address',
+    )
+    group.add_argument(
+        '-p',
+        '--prompt',
+        dest='prompt',
+        action='store_true',
+        default=False,
+        help='have gmail-count prompt you for your password',
+    )
+    parser.add_argument(
+        '--debug',
+        dest='debug',
+        action='store_true',
+        default=False,
+        help='print any exception traceback',
+    )
+    parser.add_argument('email_address', help='email address to use')
+    return parser.parse_args()
+
+
+if __name__ == '__main__':
+    args = parse_args()
+
+    if args.set_pass:
+        set_password(args.email_address, args.debug)
+    elif args.delete_pass:
+        delete_password(args.email_address, args.debug)
+    else:
+        print(get_mail_count(args.email_address, args.prompt, args.debug))
