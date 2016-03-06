@@ -6,25 +6,26 @@ i3bar to poll your inbox without the need to store your password in plaintext.
 
 Installation
 ------------
-gmailcount is tested on python 3.5. I may work on older versions of python 3.
+gmailcount is tested on python 3.5. It may work on older versions of python 3.
+
 Installation is simple:
 
     pip3 install gmailcount
 
-or with Secret Service support (gnome-keyring)
+with Secret Service support (gnome-keyring):
 
     pip3 install gmailcount[secret-service]
 
 gnome-keyring support also requires the `dbus-python` package which can't be
-installed via pip. It can either be installed via system package manager
-(python3-dbus on Debian) or from source.
+installed via pip. It can be installed via system package manager (python3-dbus
+on Debian) or from source.
 
-For alternative keyring support
+If your system keyring isn't working you can install alternative keyring support:
 
     pip3 install gmailcount[alt-keyrings]
 
 Alternative keyring support includes keyring backends that should work on
-basically any system, but may not be as secure. For more information on keyring
+almost any system, but may not be as secure. For more information on keyring
 configuration check out the python keyring
 [documentation](https://pypi.python.org/pypi/keyring#configure-your-keyring-lib).
 
@@ -51,8 +52,7 @@ password it will be stored in your system keyring. Any program using your
 gmailcount will need to have access to your keyring. 
 
 When used with no flags, gmailcount will print the number of emails in your
-inbox to stdout or nothing in case of failure. All errors are printed to stderr
-so as not to interfere with programs like xmobar.
+inbox to stdout or nothing in case of failure.
 
 Security concerns
 -----------------
