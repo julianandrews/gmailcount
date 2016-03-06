@@ -26,7 +26,7 @@ setup(
     scripts=['gmailcount'],
     install_requires=['requests>=2.9', 'keyring>=8.4'],
     extras_require={
-        'secret-service': ['secretstorage'],
-        'alt-keyrings': ['keyrings.alt'],
+        'secretservice': ['secretstorage'],
+        'altkeyrings': ['keyrings.alt'],
     }
 )

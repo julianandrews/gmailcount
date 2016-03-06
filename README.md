@@ -14,7 +14,7 @@ Installation is simple:
 
 with Secret Service support (gnome-keyring):
 
-    pip3 install gmailcount[secret-service]
+    pip3 install gmailcount[secretservice]
 
 gnome-keyring support also requires the `dbus-python` package which can't be
 installed via pip. It can be installed via system package manager (python3-dbus
@@ -22,7 +22,7 @@ on Debian) or from source.
 
 If your system keyring isn't working you can install alternative keyring support:
 
-    pip3 install gmailcount[alt-keyrings]
+    pip3 install gmailcount[altkeyrings]
 
 Alternative keyring support includes keyring backends that should work on
 almost any system, but may not be as secure. For more information on keyring
