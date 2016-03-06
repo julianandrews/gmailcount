@@ -1,0 +1,4 @@
+include gmailcount
+include LICENSE.txt
+include README.md
+include setup.py

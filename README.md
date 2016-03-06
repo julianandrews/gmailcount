@@ -6,18 +6,27 @@ i3bar to poll your inbox without the need to store your password in plaintext.
 
 Installation
 ------------
-gmailcount requires python3 and the `keyring` and `requests` libraries.
-Depending on your platform and keyring backend you may need other libraries.
-For example, if you're using gnome-keyring as your system keyring, you'll need
-the `secretstorage` and `python-dbus` packages. For some configurations the
-`keyrings.alt` package may be useful. For many systems the keyring should work
-out of the box with no extra configuration. For more information on keyring
-configuration check out the python keyring
-[documentation](https://pypi.python.org/pypi/keyring#configure-your-keyring-lib)
-to get a sense of how to configure your keyring.
+gmailcount is tested on python 3.5. I may work on older versions of python 3.
+Installation is simple:
 
-When I have time I'll write a setup script and get gmailcount onto pypi, but
-for the moment it's self-serve!
+    pip3 install gmailcount
+
+or with Secret Service support (gnome-keyring)
+
+    pip3 install gmailcount[secret-service]
+
+gnome-keyring support also requires the `dbus-python` package which can't be
+installed via pip. It can either be installed via system package manager
+(python3-dbus on Debian) or from source.
+
+For alternative keyring support
+
+    pip3 install gmailcount[alt-keyrings]
+
+Alternative keyring support includes keyring backends that should work on
+basically any system, but may not be as secure. For more information on keyring
+configuration check out the python keyring
+[documentation](https://pypi.python.org/pypi/keyring#configure-your-keyring-lib).
 
 Usage
 -----
@@ -74,9 +83,10 @@ Here's an example of a script suitable for use with xmobar:
 
     #!/usr/bin/env sh
 
-    email='example@gmail.com'
     url='https://mail.google.com'
-    full_text=$(/full/path/to/gmailcount "$email")
+    email='example@gmail.com'
+
+    full_text=$(/path/to/gmailcount "$email")
     full_text=${full_text:-?}
 
     case $full_text in
@@ -99,7 +109,7 @@ Here's one suitable for use with i3blocks:
 
     [ "$BLOCK_BUTTON" = 1 ] && xdg-open "$url"
 
-    full_text=$(/full/path/to/gmailcount "$email")
+    full_text=$(/path/to/gmailcount "$email")
     full_text=${full_text:-?}
 
     case $full_text in
