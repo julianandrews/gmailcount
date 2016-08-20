@@ -62,7 +62,7 @@ def get_count_from_xml(xml_string):
     return node.text
 
 
-def get_mail_count(email_address, prompt=False, debug=False):
+def get_mail_count(email_address, prompt=False, timeout=None, debug=False):
     """
     Get the count of emails in the inbox for email_address.
     """
@@ -75,7 +75,11 @@ def get_mail_count(email_address, prompt=False, debug=False):
         fail("No password set for '%s'" % email_address, debug=debug)
 
     auth = requests.auth.HTTPBasicAuth(email_address, password)
-    response = requests.get(url, auth=auth)
+
+    try:
+        response = requests.get(url, auth=auth, timeout=timeout)
+    except requests.Timeout:
+        fail("Request timed out", debug=debug)
 
     if response.status_code != 200:
         fail("Request failed: %s" % response.status_code, debug=debug)
@@ -109,10 +113,15 @@ def parse_args():
     group.add_argument(
         '-p',
         '--prompt',
-        dest='prompt',
         action='store_true',
         default=False,
         help='have gmail-count prompt you for your password',
+    )
+    parser.add_argument(
+        '-t',
+        '--timeout',
+        type=float,
+        help='request timeout',
     )
     parser.add_argument(
         '--debug',
@@ -133,4 +142,4 @@ if __name__ == '__main__':
     elif args.delete_password:
         delete_password(args.email_address, args.debug)
     else:
-        print(get_mail_count(args.email_address, args.prompt, args.debug))
+        print(get_mail_count(args.email_address, args.prompt, args.timeout, args.debug))

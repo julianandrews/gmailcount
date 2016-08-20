@@ -31,7 +31,7 @@ configuration check out the python keyring
 
 Usage
 -----
-    usage: gmailcount [-h] [-s | -d | -p] [--debug] email_address
+    usage: gmailcount [-h] [-s | -d | -p] [-t TIMEOUT] [--debug] email_address
 
     Check gmail message count.
 
@@ -44,6 +44,8 @@ Usage
       -d, --delete-password
                             delete the password for email_address
       -p, --prompt          have gmail-count prompt you for your password
+      -t TIMEOUT, --timeout TIMEOUT
+                            request timeout
       --debug               print any exception traceback
 
 Before you can use gmailcount in your status bar, you'll need to run it with
@@ -86,7 +88,7 @@ Here's an example of a script suitable for use with xmobar:
     url='https://mail.google.com'
     email='example@gmail.com'
 
-    full_text=$(/path/to/gmailcount "$email")
+    full_text=$(/path/to/gmailcount -t 0.3 "$email")
     full_text=${full_text:-?}
 
     case $full_text in
@@ -109,7 +111,7 @@ Here's one suitable for use with i3blocks:
 
     [ "$BLOCK_BUTTON" = 1 ] && xdg-open "$url"
 
-    full_text=$(/path/to/gmailcount "$email")
+    full_text=$(/path/to/gmailcount -t 0.3 "$email")
     full_text=${full_text:-?}
 
     case $full_text in
