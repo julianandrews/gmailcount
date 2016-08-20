@@ -95,7 +95,6 @@ def parse_args():
     group.add_argument(
         '-s',
         '--set-password',
-        dest='set_pass',
         action='store_true',
         default=False,
         help='set the password for email_address',
@@ -103,7 +102,6 @@ def parse_args():
     group.add_argument(
         '-d',
         '--delete-password',
-        dest='delete_pass',
         action='store_true',
         default=False,
         help='delete the password for email_address',
@@ -130,9 +128,9 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
 
-    if args.set_pass:
+    if args.set_password:
         set_password(args.email_address, args.debug)
-    elif args.delete_pass:
+    elif args.delete_password:
         delete_password(args.email_address, args.debug)
     else:
         print(get_mail_count(args.email_address, args.prompt, args.debug))
