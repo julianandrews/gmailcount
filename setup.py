@@ -8,7 +8,7 @@ def read(fname):
 
 setup(
     name="gmailcount",
-    version='0.1.4.dev0',
+    version='0.1.4',
     author="Julian Andrews",
     author_email="jandrews271@gmail.com",
     description=("Script to count the number of emails in your gmail inbox"),
