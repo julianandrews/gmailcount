@@ -78,8 +78,8 @@ def get_mail_count(email_address, prompt=False, timeout=None, debug=False):
 
     try:
         response = requests.get(url, auth=auth, timeout=timeout)
-    except requests.Timeout:
-        fail("Request timed out", debug=debug)
+    except (requests.Timeout, requests.ConnectionError):
+        fail("Request failed", debug=debug)
 
     if response.status_code != 200:
         fail("Request failed: %s" % response.status_code, debug=debug)
