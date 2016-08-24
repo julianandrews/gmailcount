@@ -1,11 +1,13 @@
 gmailcount
 ==========
+
 gmailcount is a simple script to count the number of emails in your gmail
 inbox. It's primary purpose is to allow status-bar programs like xmobar or
 i3bar to poll your inbox without the need to store your password in plaintext.
 
 Installation
 ------------
+
 gmailcount is tested on python 3.5. It may work on older versions of python 3.
 
 Installation is simple:
@@ -31,6 +33,7 @@ configuration check out the python keyring
 
 Usage
 -----
+
     usage: gmailcount [-h] [-s | -d | -p] [-t TIMEOUT] [--debug] email_address
 
     Check gmail message count.
@@ -58,6 +61,7 @@ inbox to stdout or nothing in case of failure.
 
 Security concerns
 -----------------
+
 One of the main goals of gmailcount is to provide a minimum level of
 security. To that end, all requests are sent via SSL, passwords are stored in
 your system keyring (and are presumably encrypted if your system keyring is
@@ -81,6 +85,7 @@ system that just stores your password as plain text at least.
 
 Sample xmobar script
 --------------------
+
 Here's an example of a script suitable for use with xmobar:
 
     #!/usr/bin/env sh
@@ -101,6 +106,7 @@ Here's an example of a script suitable for use with xmobar:
 
 Sample i3blocks script
 ----------------------
+
 Here's one suitable for use with i3blocks:
 
 
@@ -123,3 +129,44 @@ Here's one suitable for use with i3blocks:
     echo "$full_text"
     echo "$short_text"
     echo "$color"
+
+Sample Asynchrnous xmobar script
+--------------------------------
+
+Here's a somewhat more sophisticated script for xmobar which never blocks
+waiting for the google servers. It works by writing the data asynchronously to
+a temp file. The first argument to the script will set a timeout for writing
+the data so that you can check gmail just before your status bar updates.
+Something similar should work for i3blocks.
+
+    #!/usr/bin/env sh
+
+    STATUSFILE=/tmp/.gmail-status
+    GMAILCOUNT=/path/to/gmailcount
+    SLEEPTIME=${1:-0}
+    EMAIL='example@gmail.com'
+    URL='https://mail.google.com'
+
+    echo_status() {
+      echo "<action=\`xdg-open $URL\`><fc=$2><fn=1></fn> $1</fc></action>"
+    }
+
+    write_data() {
+      sleep "$SLEEPTIME"
+      full_text=$("$GMAILCOUNT" "$EMAIL")
+      full_text=${full_text:-?}
+
+      case $full_text in
+        ''|*[!0-9]*) color=\#FF0000 ;;
+        0)           color=\#888888 ;;
+        *)           color=\#00FF00 ;;
+      esac
+
+      echo_status "$full_text" "$color" > "$STATUSFILE"
+    }
+
+    touch "$STATUSFILE"
+    output=$(cat "$STATUSFILE")
+    [ ! -z "$output" ] && echo "$output" || echo_status "?" \#880088
+    > "$STATUSFILE"
+    write_data &
