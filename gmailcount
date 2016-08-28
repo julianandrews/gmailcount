@@ -3,91 +3,90 @@
 import argparse
 import getpass
 import keyring
+import logging
 import requests
-import sys
 import xml.etree.ElementTree
 
 SERVICE_NAME = 'gmail-count'
 
 
-def fail(message, debug=False):
-    """
-    Log message to stderr and exit the script with an error code. Reraise
-    exceptions where appropriate.
-    """
-    print(message, file=sys.stderr)
-    if debug and sys.exc_info() != (None, None, None):
-        raise
-    sys.exit(1)
+logger = logging.getLogger('gmailcount')
 
 
-def set_password(email_address, debug=False):
+class GetPasswordError(RuntimeError):
+    pass
+
+
+def set_password(email_address):
     """
     Store the password associated with email_address in the system keyring.
     """
     password = getpass.getpass()
-    try:
-        keyring.set_password(SERVICE_NAME, email_address, password)
-    except keyring.PasswordSetError as e:
-        fail("Failed to set password: '%s'" % e, debug=debug)
+    keyring.set_password(SERVICE_NAME, email_address, password)
 
 
-def delete_password(email_address, debug=False):
+def delete_password(email_address):
     """
     Delete the password associated with email_address from the system keyring.
     """
-    try:
-        keyring.delete_password(SERVICE_NAME, email_address)
-    except keyring.errors.PasswordDeleteError as e:
-        fail("Failed to delete password: '%s'" % e, debug=debug)
+    keyring.delete_password(SERVICE_NAME, email_address)
+
+
+def get_password(email_address, prompt=False):
+    """
+    Get password for email_address from the system keyring, or from the
+    terminal if prompt is True.
+    """
+    if prompt:
+        password = getpass.getpass()
+    else:
+        password = keyring.get_password(SERVICE_NAME, email_address)
+    if password is None:
+        raise GetPasswordError("No password set for '{}'".format(args.email_address))
+    return password
 
 
 def get_url(email_address):
     """
     Get the appropriate url for the gmail atom feed for email_address.
     """
-    localpart, _, domain = email_address.rpartition('@')
+    domain = email_address.rpartition('@')[-1]
     if domain == 'gmail.com':
         return 'https://mail.google.com/mail/feed/atom/'
     else:
         return 'https://mail.google.com/a/%s/feed/atom/' % domain
 
 
-def get_count_from_xml(xml_string):
-    """
-    Given the xml from the gmail atom feed, return the count of emails.
-    """
-    tree = xml.etree.ElementTree.fromstring(xml_string)
-    node = tree.find('{http://purl.org/atom/ns#}fullcount')
-    return node.text
-
-
-def get_mail_count(email_address, prompt=False, timeout=None, debug=False):
+def get_mail_count(email_address, password, timeout=None):
     """
     Get the count of emails in the inbox for email_address.
     """
     url = get_url(email_address)
-    if prompt:
-        password = getpass.getpass()
-    else:
-        password = keyring.get_password(SERVICE_NAME, email_address)
-    if password is None:
-        fail("No password set for '%s'" % email_address, debug=debug)
-
     auth = requests.auth.HTTPBasicAuth(email_address, password)
 
-    try:
-        response = requests.get(url, auth=auth, timeout=timeout)
-    except (requests.Timeout, requests.ConnectionError):
-        fail("Request failed", debug=debug)
+    response = requests.get(url, auth=auth, timeout=timeout)
+    response.raise_for_status()
 
-    if response.status_code != 200:
-        fail("Request failed: %s" % response.status_code, debug=debug)
+    tree = xml.etree.ElementTree.fromstring(response.content)
+    node = tree.find('{http://purl.org/atom/ns#}fullcount')
+    return node.text
 
-    try:
-        return get_count_from_xml(response.content)
-    except xml.etree.ElementTree.ParseError:
-        fail("Failed to parse XML:\n%s" % xml_string, debug=debug)
+
+def log_error(e, debug):
+    """
+    Log error with a human readable message.
+    """
+    if isinstance(e, keyring.errors.PasswordSetError):
+        message = "Set password failed: {}".format(e)
+    elif isinstance(e, keyring.errors.PasswordDeleteError):
+        message = "Delete password failed: {}".format(e)
+    elif isinstance(e, requests.RequestException):
+        message = "Request failed"
+    elif isinstance(e, GetPasswordError):
+        message = "Get password failed: {}".format(e)
+    else:
+        message = "Unexpected Error"
+    logger.error(message, exc_info=debug)
 
 
 def parse_args():
@@ -128,18 +127,22 @@ def parse_args():
         dest='debug',
         action='store_true',
         default=False,
-        help='print any exception traceback',
+        help='print tracebacks for errors',
     )
-    parser.add_argument('email_address', help='email address to use')
+    parser.add_argument('email_address', help='email address to check')
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = parse_args()
-
-    if args.set_password:
-        set_password(args.email_address, args.debug)
-    elif args.delete_password:
-        delete_password(args.email_address, args.debug)
-    else:
-        print(get_mail_count(args.email_address, args.prompt, args.timeout, args.debug))
+    try:
+        if args.set_password:
+            set_password(args.email_address)
+        elif args.delete_password:
+            delete_password(args.email_address)
+        else:
+            password = get_password(args.email_address, args.prompt)
+            print(get_mail_count(args.email_address, password, args.timeout))
+    except Exception as e:
+        log_error(e, debug=args.debug)
+        exit(1)
