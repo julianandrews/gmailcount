@@ -7,7 +7,7 @@ import logging
 import requests
 import xml.etree.ElementTree
 
-SERVICE_NAME = 'gmail-count'
+SERVICE_NAME = 'gmailcount'
 
 
 logger = logging.getLogger('gmailcount')
