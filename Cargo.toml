@@ -2,7 +2,17 @@
 name = "gmailcount"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Julian Andrews <jandrews271@gmail.com>"]
+license = "MIT"
+keywords = ["gmail", "cli", "statusbar"]
+repository = "https://github.com/julianandrews/gmailcount/"
+readme = "README.md"
+description = "Script to count the number of emails in your gmail inbox"
+categories = ["command-line-utilities", "email"]
 
 [dependencies]
+clap = { version = "3.1.6", features = ["derive"] }
+keyring = "1.1.2"
+minidom = "0.14.0"
+reqwest = { version = "0.11.9", features = ["blocking"] }
+rpassword = "5.0"
