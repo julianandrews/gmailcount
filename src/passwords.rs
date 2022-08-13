@@ -8,9 +8,6 @@ pub fn set_password(email_address: &str) -> Result<(), GmailcountError> {
         .map_err(|e| GmailcountError::PasswordReadError(e))?;
     let entry = keyring::Entry::new(SERVICE, email_address);
     entry
-        .delete_password()
-        .map_err(|e| GmailcountError::PasswordDeleteError(e))?;
-    entry
         .set_password(&pass)
         .map_err(|e| GmailcountError::PasswordSetError(e))
 }
