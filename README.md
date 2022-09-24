@@ -1,50 +1,35 @@
 # gmailcount
 
-gmailcount is a simple script to count the number of emails in your gmail
+gmailcount is a simple tool to count the number of emails in your gmail
 inbox. It's primary purpose is to allow status-bar programs like xmobar or
 i3bar to poll your inbox without the need to store your password in plaintext.
 
 ## Installation
 
-Build with
+Look for releases on github or build with
 
-```
-cargo build --release
-```
+    cargo build --release
 
 ## Usage
 
-```
-Script to count the number of emails in your gmail inbox
+You'll first need to generate a Google app password and store it in the system
+keyring with:
 
-USAGE:
-    gmailcount [OPTIONS] <EMAIL_ADDRESS> [SUBCOMMAND]
+    gmailcount your-email@gmail.com set-password
 
-ARGS:
-    <EMAIL_ADDRESS>    Email Address to check
+Then, to get a count of emails, simply run:
 
-OPTIONS:
-    -h, --help                 Print help information
-    -t, --timeout <TIMEOUT>    Request timeout in seconds
-    -V, --version              Print version information
+    gmailcount your-email@gmail.com
 
-SUBCOMMANDS:
-    delete-password    Delete the password for the provided email address from the secret store
-    help               Print this message or the help of the given subcommand(s)
-    set-password       Set the password for the provided email address in the secret store
-```
+Any program running gmailcount will need to have access to your keyring. The
+current count of unread emails in your inbox will print to stdout. In case of
+error, all output will print to stderr.
 
-Before you can use gmailcount in your status bar, you'll need to run it with
-the `set-password` flag to set the password for your email address. Once you've
-set your password it will be stored in your system keyring. Any program using
-`gmailcount` will need to have access to your keyring.
-
-When used with no flags, `gmailcount` will print the number of emails in your
-inbox to stdout or nothing in case of failure.
+See `gmailcount -h` for detailed usage.
 
 ## Security concerns
 
-One of the main goals of `gmailcount` is to provide a minimum level of
+One of the main goals of gmailcount is to provide a minimum level of
 security. To that end, all requests are sent via SSL, passwords are stored in
 your system keyring (and are presumably encrypted if your system keyring is
 worth anything), and the recommended use pattern is with app passwords on
@@ -54,19 +39,20 @@ case your system is compromised.
 
 Obviously though any system that allows your computer to poll your email
 without any human interaction isn't going to be ideal from a security
-standpoint. `gmailcount` is only as secure as your system keyring, which
+standpoint. gmailcount is only as secure as your system keyring, which
 depending on how you use it and your configuration may not be very secure at
-all. Certainly if you're using `gmailcount` in a status bar, any one who
+all. Certainly if you're using gmailcount in a status bar, any one who
 manages to get access to your logged in user account will have access to your
 email, and if your keyring is secured by an insufficiently strong password,
 someone with access to your hard drive may be able to crack your keyring
 password and access your gmail password.
 
-Use `gmailcount` at your own risk! Still, it should be a lot more secure than a
+Use gmailcount at your own risk! Still, it should be a lot more secure than a
 system that just stores your password as plain text at least.
 
-Sample xmobar script
---------------------
+## Examples
+
+### Simple xmobar script
 
 Here's an example of a script suitable for use with xmobar:
 
@@ -86,11 +72,9 @@ Here's an example of a script suitable for use with xmobar:
 
     echo "<action=\`xdg-open $url\`><fc=$color>✉ $full_text</fc></action>"
 
-Sample i3blocks script
-----------------------
+### Simple i3blocks script
 
 Here's one suitable for use with i3blocks:
-
 
     #!/usr/bin/env sh
 
@@ -112,43 +96,77 @@ Here's one suitable for use with i3blocks:
     echo "$short_text"
     echo "$color"
 
-Sample Asynchrnous xmobar script
---------------------------------
+### Asynchronous example
 
-Here's a somewhat more sophisticated script for xmobar which never blocks
-waiting for the google servers. It works by writing the data asynchronously to
-a temp file. The first argument to the script will set a timeout for writing
-the data so that you can check gmail just before your status bar updates.
-Something similar should work for i3blocks.
+The above scripts should work if your latency to google is low, but don't
+behave particularly well if network connectivity is slow or interrupted.
+
+Here's how I use gmailcount:
+
+Update script (/usr/bin/update-gmail-count):
+
+    #!/usr/bin/env bash
+
+    EMAIL="$1"
+    BINARY=/usr/bin/gmailcount
+    CACHE_DIR=${XDG_CACHE_HOME:-/home/$USER/.cache}
+
+    mkdir -p "$CACHE_DIR/gmailcount"
+    output="$("$BINARY" "$EMAIL")"
+    if [ ! $? -eq 0 ]; then
+      echo -n "" > "$CACHE_DIR/gmailcount/$EMAIL"
+      echo "gmailcount failed"
+      exit 1
+    fi
+
+    echo -n "$output" > "$CACHE_DIR/gmailcount/$EMAIL"
+
+Systemd service (~/.config/systemd/user/gmailcount.service):
+
+    [Unit]
+    Description=Gmail Count Service
+
+    [Service]
+    Type=oneshot
+    ExecStart=/usr/bin/update-gmail-count your-email@gmail.com
+
+Systemd timer (~/.config/systemd/user/gmailcount.timer):
+
+    [Unit]
+    Description=Timer for the gmailcount service
+    Requires=gmailcount.service
+
+    [Timer]
+    OnActiveSec=0
+    OnUnitActiveSec=10
+    AccuracySec=10
+
+    [Install]
+    WantedBy=timers.target
+
+Sample xmobar script:
 
     #!/usr/bin/env sh
 
-    STATUSFILE=/tmp/.gmail-status
-    GMAILCOUNT=/path/to/gmailcount
-    SLEEPTIME=${1:-0}
-    EMAIL='example@gmail.com'
+    EMAIL="$1"
     URL='https://mail.google.com'
+    CACHE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/gmailcount/$EMAIL"
 
     echo_status() {
       echo "<action=\`xdg-open $URL\`><fc=$2><fn=1></fn> $1</fc></action>"
     }
 
-    write_data() {
-      sleep "$SLEEPTIME"
-      full_text=$("$GMAILCOUNT" "$EMAIL")
+    get_status_output() {
+      full_text=$(cat "$CACHE_FILE")
       full_text=${full_text:-?}
 
       case $full_text in
-        ''|*[!0-9]*) color=\#FF0000 ;;
-        0)           color=\#888888 ;;
-        *)           color=\#00FF00 ;;
+        ''|*[!0-9]*) color=\#dc322f ;;
+        0)           color=\#586e75 ;;
+        *)           color=\#2AA198 ;;
       esac
 
-      echo_status "$full_text" "$color" > "$STATUSFILE"
+      echo_status "$full_text" "$color"
     }
 
-    touch "$STATUSFILE"
-    output=$(cat "$STATUSFILE")
-    [ ! -z "$output" ] && echo "$output" || echo_status "?" \#880088
-    > "$STATUSFILE"
-    write_data &
+    get_status_output
