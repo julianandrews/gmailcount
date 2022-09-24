@@ -1,0 +1,88 @@
+name: Build
+on:
+  workflow_dispatch: {}
+jobs:
+  build:
+    name: Build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [linux, macos]
+        include:
+        - build: linux
+          os: ubuntu-latest
+          rust: nightly
+          target: x86_64-unknown-linux-gnu
+        - build: macos
+          os: macos-latest
+          rust: nightly
+          target: x86_64-apple-darwin
+      fail-fast: false
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ matrix.rust }}
+        profile: minimal
+        override: true
+        target: ${{ matrix.target }}
+
+    - name: Build binary
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --verbose --release --target ${{ matrix.target }}
+
+    - name: Strip binary
+      run: strip "target/${{ matrix.target }}/release/gmailcount"
+
+    - name: Build archive
+      id: build_archive
+      shell: bash
+      run: |
+        version="$(cargo metadata --format-version 1 | jq -r '[.packages[]|select(.name=="gmailcount")][0].version')"
+        mkdir archive
+        cp LICENSE README.md archive/
+        cd archive
+        cp "../target/${{ matrix.target }}/release/gmailcount" ./
+        name="gmailcount-$version-${{ matrix.target }}.tar.gz"
+        tar -czf "$name" LICENSE README.md gmailcount
+        echo "::set-output name=name::$name"
+
+    - name: Upload archive
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ steps.build_archive.outputs.name }}
+        path: archive/${{ steps.build_archive.outputs.name }}
+
+  make_deb:
+    name: Make .deb
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+        profile: minimal
+        override: true
+
+    - name: Build .deb
+      id: deb
+      run: |
+        cargo install cargo-deb
+        deb_file=$(cargo deb)
+        echo "::set-output name=name::$(basename $deb_file)"
+
+    - name: Upload .deb
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ steps.deb.outputs.name }}
+        path: target/debian/${{ steps.deb.outputs.name }}
