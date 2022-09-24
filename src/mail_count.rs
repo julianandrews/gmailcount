@@ -6,7 +6,7 @@ pub fn get_mail_count(email_address: &str, timeout: Option<u64>) -> Result<u64, 
     let url = get_url(email_address)?;
     let password = passwords::get_password(email_address)?;
     let text = get_feed_text(&url, email_address, &password, timeout)
-        .map_err(|e| GmailcountError::RequestError(e))?;
+        .map_err(GmailcountError::RequestError)?;
     parse_feed(&text)
 }
 
@@ -30,7 +30,7 @@ fn get_feed_text(
 fn get_url(email_address: &str) -> Result<String, GmailcountError> {
     let (_user, domain) = email_address
         .rsplit_once('@')
-        .ok_or(GmailcountError::InvalidEmail(email_address.to_string()))?;
+        .ok_or_else(|| GmailcountError::InvalidEmail(email_address.to_string()))?;
     match domain {
         "gmail.com" => Ok("https://mail.google.com/mail/feed/atom".to_string()),
         _ => Ok(format!("https://mail.google.com/a/{}/feed/atom/", domain)),
@@ -44,7 +44,7 @@ fn parse_feed(text: &str) -> Result<u64, GmailcountError> {
         .map_err(|_| GmailcountError::FeedParseError(text.to_string()))?;
     let count = root
         .get_child("fullcount", "http://purl.org/atom/ns#")
-        .ok_or(GmailcountError::FeedParseError(text.to_string()))?;
+        .ok_or_else(|| GmailcountError::FeedParseError(text.to_string()))?;
     count
         .text()
         .parse()
