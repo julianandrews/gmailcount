@@ -6,13 +6,12 @@ pub struct Cache {
 
 impl Cache {
     pub fn new(cache_dir: std::path::PathBuf) -> Result<Self, GmailcountError> {
-        std::fs::create_dir_all(&cache_dir)
-            .map_err(|e| GmailcountError::CacheInitializationError(e))?;
+        std::fs::create_dir_all(&cache_dir).map_err(GmailcountError::CacheInitializationError)?;
         Ok(Self { cache_dir })
     }
 
     pub fn write(&self, address: &str, text: &str) -> Result<(), GmailcountError> {
         let cache_file = self.cache_dir.join(address);
-        std::fs::write(cache_file, text).map_err(|e| GmailcountError::CacheWriteError(e))
+        std::fs::write(cache_file, text).map_err(GmailcountError::CacheWriteError)
     }
 }

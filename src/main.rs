@@ -23,13 +23,12 @@ fn main() {
         }
         Some(args::Command::Daemon(daemon_args)) => {
             println!("Running as daemon");
-            let result = run_daemon(
+            run_daemon(
                 &args.email_address,
                 args.timeout,
                 daemon_args.poll_frequency,
                 &daemon_args.cache_dir,
-            );
-            result
+            )
         }
     };
     if let Err(error) = result {
