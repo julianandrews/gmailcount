@@ -8,8 +8,8 @@ pub struct Args {
     pub email_address: String,
 
     /// Request timeout in seconds
-    #[clap(short, long)]
-    pub timeout: Option<u64>,
+    #[clap(parse(try_from_str=parse_duration), short, long)]
+    pub timeout: Option<std::time::Duration>,
 
     #[clap(subcommand)]
     pub command: Option<Command>,
@@ -38,6 +38,10 @@ pub struct DaemonModeArgs {
     pub cache_dir: std::path::PathBuf,
 
     /// How often to poll your inbox in seconds.
-    #[clap(long, default_value = "300")]
-    pub poll_frequency: u64,
+    #[clap(parse(try_from_str=parse_duration), long, default_value = "300")]
+    pub poll_time: std::time::Duration,
+}
+
+fn parse_duration(arg: &str) -> Result<std::time::Duration, std::num::ParseIntError> {
+    Ok(std::time::Duration::from_secs(arg.parse()?))
 }

@@ -109,7 +109,7 @@ Systemd service (~/.config/systemd/<user>/gmailcount.service):
     Description=Gmail Count Service
 
     [Service]
-    ExecStart=/usr/bin/gmailcount <your-email>@gmail.com daemon --cache-dir /home/<user>/.cache/gmailcount --poll-frequency 10
+    ExecStart=/usr/bin/gmailcount <your-email>@gmail.com daemon --cache-dir /home/<user>/.cache/gmailcount --poll-time 10
 
     [Install]
     WantedBy=multi-user.target

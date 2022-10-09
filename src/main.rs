@@ -9,15 +9,18 @@ use clap::Parser;
 fn main() {
     let args = args::Args::parse();
     let result = match args.command {
-        None => mail_count::get_mail_count(&args.email_address, args.timeout)
+        None => mail_count::MailCounter::new(args.email_address, args.timeout)
+            .and_then(|mail_counter| mail_counter.get_count())
             .map(|count| println!("{}", count)),
         Some(args::Command::SetPassword) => {
-            let result = passwords::set_password(&args.email_address);
+            let entry = passwords::PasswordEntry::new(&args.email_address);
+            let result = entry.set();
             println!("Password set");
             result
         }
         Some(args::Command::DeletePassword) => {
-            let result = passwords::delete_password(&args.email_address);
+            let entry = passwords::PasswordEntry::new(&args.email_address);
+            let result = entry.delete();
             println!("Password deleted");
             result
         }
@@ -26,7 +29,7 @@ fn main() {
             run_daemon(
                 &args.email_address,
                 args.timeout,
-                daemon_args.poll_frequency,
+                daemon_args.poll_time,
                 &daemon_args.cache_dir,
             )
         }
@@ -39,20 +42,20 @@ fn main() {
 
 fn run_daemon(
     email_address: &str,
-    timeout: Option<u64>,
-    poll_frequency: u64,
+    timeout: Option<std::time::Duration>,
+    poll_time: std::time::Duration,
     cache_dir: &std::path::Path,
 ) -> Result<(), error::GmailcountError> {
+    let mail_counter = mail_count::MailCounter::new(email_address.to_string(), timeout)?;
     let cache = cache::Cache::new(cache_dir.to_path_buf())?;
-    let sleep_time = std::time::Duration::from_secs(poll_frequency);
     loop {
-        match mail_count::get_mail_count(email_address, timeout) {
+        match mail_counter.get_count() {
             Ok(count) => cache.write(email_address, &count.to_string())?,
             Err(error) => {
                 eprintln!("{}", error);
                 cache.write(email_address, "?")?;
             }
         }
-        std::thread::sleep(sleep_time);
+        std::thread::sleep(poll_time);
     }
 }
