@@ -7,6 +7,8 @@ pub enum GmailcountError {
     RequestError(reqwest::Error),
     InvalidEmail(String),
     FeedParseError(String),
+    CacheInitializationError(std::io::Error),
+    CacheWriteError(std::io::Error),
 }
 
 impl std::fmt::Display for GmailcountError {
@@ -19,6 +21,8 @@ impl std::fmt::Display for GmailcountError {
             Self::InvalidEmail(s) => write!(f, "Invalid email address: {s}"),
             Self::RequestError(e) => write!(f, "Failed to fetch email count: {e}"),
             Self::FeedParseError(s) => write!(f, "Failed to parse atom feed: {s}"),
+            Self::CacheInitializationError(e) => write!(f, "Failed to initialize cache: {e}"),
+            Self::CacheWriteError(e) => write!(f, "Failed to write to cache: {e}"),
         }
     }
 }

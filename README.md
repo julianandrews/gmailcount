@@ -103,46 +103,16 @@ behave particularly well if network connectivity is slow or interrupted.
 
 Here's how I use gmailcount:
 
-Update script (/usr/bin/update-gmail-count):
-
-    #!/usr/bin/env bash
-
-    EMAIL="$1"
-    BINARY=/usr/bin/gmailcount
-    CACHE_DIR=${XDG_CACHE_HOME:-/home/$USER/.cache}
-
-    mkdir -p "$CACHE_DIR/gmailcount"
-    output="$("$BINARY" "$EMAIL")"
-    if [ ! $? -eq 0 ]; then
-      echo -n "" > "$CACHE_DIR/gmailcount/$EMAIL"
-      echo "gmailcount failed"
-      exit 1
-    fi
-
-    echo -n "$output" > "$CACHE_DIR/gmailcount/$EMAIL"
-
-Systemd service (~/.config/systemd/user/gmailcount.service):
+Systemd service (~/.config/systemd/<user>/gmailcount.service):
 
     [Unit]
     Description=Gmail Count Service
 
     [Service]
-    Type=oneshot
-    ExecStart=/usr/bin/update-gmail-count your-email@gmail.com
-
-Systemd timer (~/.config/systemd/user/gmailcount.timer):
-
-    [Unit]
-    Description=Timer for the gmailcount service
-    Requires=gmailcount.service
-
-    [Timer]
-    OnActiveSec=0
-    OnUnitActiveSec=10
-    AccuracySec=10
+    ExecStart=/usr/bin/gmailcount <your-email>@gmail.com daemon --cache-dir /home/<user>/.cache/gmailcount --poll-frequency 10
 
     [Install]
-    WantedBy=timers.target
+    WantedBy=multi-user.target
 
 Sample xmobar script:
 
