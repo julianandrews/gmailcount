@@ -50,10 +50,10 @@ fn run_daemon(
     let cache = cache::Cache::new(cache_dir.to_path_buf())?;
     loop {
         match mail_counter.get_count() {
-            Ok(count) => cache.write(email_address, &count.to_string())?,
+            Ok(count) => cache.update(email_address, &count.to_string())?,
             Err(error) => {
                 eprintln!("{}", error);
-                cache.write(email_address, "?")?;
+                cache.update(email_address, "?")?;
             }
         }
         std::thread::sleep(poll_time);

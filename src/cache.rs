@@ -10,8 +10,13 @@ impl Cache {
         Ok(Self { cache_dir })
     }
 
-    pub fn write(&self, address: &str, text: &str) -> Result<(), GmailcountError> {
+    pub fn update(&self, address: &str, value: &str) -> Result<(), GmailcountError> {
         let cache_file = self.cache_dir.join(address);
-        std::fs::write(cache_file, text).map_err(GmailcountError::CacheWriteError)
+        let old_value =
+            std::fs::read_to_string(&cache_file).map_err(GmailcountError::CacheWriteError)?;
+        if value != old_value {
+            std::fs::write(&cache_file, value).map_err(GmailcountError::CacheWriteError)?;
+        }
+        Ok(())
     }
 }
