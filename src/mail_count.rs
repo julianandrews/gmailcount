@@ -15,7 +15,7 @@ impl MailCounter {
         let request_builder = {
             let url = Self::get_url(&email_address)?;
             let client = reqwest::blocking::Client::new();
-            let request_builder = client.get(&url);
+            let request_builder = client.get(url);
             match timeout {
                 Some(timeout) => request_builder.timeout(timeout),
                 None => request_builder,
