@@ -1,6 +1,9 @@
-name: Build
+name: Create Release
 on:
-  workflow_dispatch: {}
+  push:
+    tags:
+      - 'v*'
+
 jobs:
   build:
     name: Build
@@ -21,21 +24,18 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Install Rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ matrix.rust }}
-        profile: minimal
-        override: true
-        target: ${{ matrix.target }}
+        targets: ${{ matrix.target }}
 
     - name: Build binary
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: --verbose --release --target ${{ matrix.target }}
+      run: cargo build --verbose --release --target ${{ matrix.target }}
+      env:
+        RUST_BACKTRACE: 1
 
     - name: Strip binary
       run: strip "target/${{ matrix.target }}/release/gmailcount"
@@ -50,11 +50,11 @@ jobs:
         cd archive
         cp "../target/${{ matrix.target }}/release/gmailcount" ./
         name="gmailcount-$version-${{ matrix.target }}.tar.gz"
-        tar -czf "$name" LICENSE README.md gmailcount
-        echo "::set-output name=name::$name"
+        tar -czf "$name" *
+        echo "name=$name" >> "$GITHUB_OUTPUT"
 
     - name: Upload archive
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ steps.build_archive.outputs.name }}
         path: archive/${{ steps.build_archive.outputs.name }}
@@ -65,24 +65,44 @@ jobs:
     steps:
 
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Install Rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@master
       with:
         toolchain: nightly
-        profile: minimal
-        override: true
 
     - name: Build .deb
       id: deb
       run: |
         cargo install cargo-deb
-        deb_file=$(cargo deb)
-        echo "::set-output name=name::$(basename $deb_file)"
+        debfile=$(cargo deb)
+        result=$?
+        echo "debfile=$(basename $debfile)" >> "$GITHUB_OUTPUT"
+        exit $result
 
     - name: Upload .deb
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: ${{ steps.deb.outputs.name }}
-        path: target/debian/${{ steps.deb.outputs.name }}
+        name: ${{ steps.deb.outputs.debfile }}
+        path: target/debian/${{ steps.deb.outputs.debfile }}
+
+  release:
+    name: Create release
+    needs: [build, make_deb]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+        merge-multiple: true
+    - name: Create release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+        draft: true
+        files: |
+          artifacts/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
